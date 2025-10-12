@@ -4,6 +4,7 @@ def read_file(file_path):
         lines = file.read().splitlines()
     return lines
 
+
 # 统计拼音出现情况
 def count_pinyin_occurrences(new_pinyin_list, original_pinyin_set):
     appeared_count = 0
@@ -14,8 +15,9 @@ def count_pinyin_occurrences(new_pinyin_list, original_pinyin_set):
             appeared_count += 1
         else:
             not_appeared.append(pinyin)
-    
+
     return appeared_count, not_appeared
+
 
 # 主函数
 def main():
@@ -32,6 +34,7 @@ def main():
     # 打印结果
     print(f"在原始列表中出现的拼音个数: {appeared_count}")
     print(f"没有出现在原始列表中的拼音: {not_appeared}")
+
 
 if __name__ == "__main__":
     main()

@@ -8,6 +8,7 @@ from ..attention import CA, STA, SATA
 
 from torch import Tensor
 
+
 class PositionalEncoding(nn.Module):
     def __init__(self, emb_size: int, dropout: float = 0.1, maxlen: int = 500):
         super(PositionalEncoding, self).__init__()
@@ -23,6 +24,7 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, token_embedding):
         return self.dropout(token_embedding + self.pos_embedding[:token_embedding.size(0), :])
+
 
 class Cnn3d(nn.Module):
     def __init__(self):
@@ -40,7 +42,7 @@ class Cnn3d(nn.Module):
         self.bn3 = nn.BatchNorm3d(96)
 
         self.relu = nn.ReLU(inplace=True)
-        
+
         self.ca = CA(96)
         self.sta = STA()
         self.sata = SATA()
@@ -72,8 +74,8 @@ class Cnn3d(nn.Module):
 
         x = self.ca(x)
         x = self.sta(x)
-        x = self.sata(x)        # (B, T, 3072)
-        
+        x = self.sata(x)  # (B, T, 3072)
+
         x = x.permute(1, 0, 2).contiguous()
         self.gru1.flatten_parameters()
         # self.gru2.flatten_parameters()
@@ -91,24 +93,25 @@ class Cnn3d(nn.Module):
                 nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
-                    
+
             elif isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
-                    
+
             elif isinstance(m, nn.Conv1d):
                 nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
-            
+
             elif isinstance(m, nn.Linear):
                 nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
                 nn.init.constant_(m.bias, 0)
-                
+
             elif isinstance(m, nn.BatchNorm3d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
+
 
 class Cnn2d(nn.Module):
     def __init__(self):
@@ -121,17 +124,18 @@ class Cnn2d(nn.Module):
 
     def forward(self, x: Tensor):
         B, C, T, H, W = x.size()
-        x = x.transpose(1 ,2).contiguous()          # (B, T, C, H, W)
-        x = x.view(B*T, C, H, W)   
+        x = x.transpose(1, 2).contiguous()  # (B, T, C, H, W)
+        x = x.view(B * T, C, H, W)
 
         x = self.res18(x)
         x = x.view(B, T, 512)
-        x = x.transpose(0, 1).contiguous()   # (T, B, 512)
-        
+        x = x.transpose(0, 1).contiguous()  # (T, B, 512)
+
         # self.gru2.flatten_parameters()
         # x, h = self.gru2(x)
         # x = self.dropout(x)
         return x
+
 
 class Fusion1(nn.Module):
     def __init__(self, drop=0.1):
@@ -151,12 +155,12 @@ class Fusion1(nn.Module):
         self.norm = nn.LayerNorm(512)
 
     def forward(self, x: Tensor):
-        x1 = self.cnn3d.forward(x)    # (T, B, 512)
-        x2 = self.cnn2d.forward(x)    # (T, B, 512)
+        x1 = self.cnn3d.forward(x)  # (T, B, 512)
+        x2 = self.cnn2d.forward(x)  # (T, B, 512)
 
         x1 = self.pos_embed(x1)
         x2 = self.pos_embed(x2)
-        
+
         x1 = self.norm(x1 + self.dropout(self.self_attn1(x1, x1, x1, need_weights=False)[0]))
         x2 = self.norm(x2 + self.dropout(self.self_attn1(x2, x2, x2, need_weights=False)[0]))
 
@@ -164,7 +168,8 @@ class Fusion1(nn.Module):
         # x4 = self.norm(x2 + self.dropout(self.cross_attn2(x2, x1, x1, need_weights=False)[0]))
 
         return x3
-    
+
+
 class Fusion2(nn.Module):
     def __init__(self, drop=0.1):
         super().__init__()
@@ -183,12 +188,12 @@ class Fusion2(nn.Module):
         self.norm = nn.LayerNorm(512)
 
     def forward(self, x: Tensor):
-        x1 = self.cnn3d.forward(x)    # (T, B, 512)
-        x2 = self.cnn2d.forward(x)    # (T, B, 512)
+        x1 = self.cnn3d.forward(x)  # (T, B, 512)
+        x2 = self.cnn2d.forward(x)  # (T, B, 512)
 
         x1 = self.pos_embed(x1)
         x2 = self.pos_embed(x2)
-        
+
         x1 = self.norm(x1 + self.dropout(self.self_attn1(x1, x1, x1, need_weights=False)[0]))
         x2 = self.norm(x2 + self.dropout(self.self_attn2(x2, x2, x2, need_weights=False)[0]))
 
@@ -196,6 +201,7 @@ class Fusion2(nn.Module):
         # x4 = self.norm(x2 + self.dropout(self.cross_attn2(x2, x1, x1, need_weights=False)[0]))
 
         return x3
+
 
 class Fusion11(nn.Module):
     def __init__(self, drop=0.1):
@@ -216,12 +222,12 @@ class Fusion11(nn.Module):
         self.fc = nn.Linear(1024, 512, bias=False)
 
     def forward(self, x: Tensor):
-        x1 = self.cnn3d.forward(x)    # (T, B, 512)
-        x2 = self.cnn2d.forward(x)    # (T, B, 512)
+        x1 = self.cnn3d.forward(x)  # (T, B, 512)
+        x2 = self.cnn2d.forward(x)  # (T, B, 512)
 
         x1 = self.pos_embed(x1)
         x2 = self.pos_embed(x2)
-        
+
         x1 = self.norm(x1 + self.dropout(self.self_attn1(x1, x1, x1, need_weights=False)[0]))
         x2 = self.norm(x2 + self.dropout(self.self_attn1(x2, x2, x2, need_weights=False)[0]))
 
@@ -233,6 +239,7 @@ class Fusion11(nn.Module):
         y = self.dropout(y)
 
         return x3
+
 
 class Fusion12(nn.Module):
     def __init__(self, drop=0.1):
@@ -253,12 +260,12 @@ class Fusion12(nn.Module):
         self.fc = nn.Linear(1024, 512, bias=False)
 
     def forward(self, x: Tensor):
-        x1 = self.cnn3d.forward(x)    # (T, B, 512)
-        x2 = self.cnn2d.forward(x)    # (T, B, 512)
+        x1 = self.cnn3d.forward(x)  # (T, B, 512)
+        x2 = self.cnn2d.forward(x)  # (T, B, 512)
 
         x1 = self.pos_embed(x1)
         x2 = self.pos_embed(x2)
-        
+
         x1 = self.norm(x1 + self.dropout(self.self_attn1(x1, x1, x1, need_weights=False)[0]))
         x2 = self.norm(x2 + self.dropout(self.self_attn1(x2, x2, x2, need_weights=False)[0]))
 
@@ -270,7 +277,8 @@ class Fusion12(nn.Module):
         y = self.dropout(y)
 
         return x3
-    
+
+
 class Fusion21(nn.Module):
     def __init__(self, drop=0.1):
         super().__init__()
@@ -290,12 +298,12 @@ class Fusion21(nn.Module):
         self.fc = nn.Linear(1024, 512, bias=False)
 
     def forward(self, x: Tensor):
-        x1 = self.cnn3d.forward(x)    # (T, B, 512)
-        x2 = self.cnn2d.forward(x)    # (T, B, 512)
+        x1 = self.cnn3d.forward(x)  # (T, B, 512)
+        x2 = self.cnn2d.forward(x)  # (T, B, 512)
 
         x1 = self.pos_embed(x1)
         x2 = self.pos_embed(x2)
-        
+
         x1 = self.norm(x1 + self.dropout(self.self_attn1(x1, x1, x1, need_weights=False)[0]))
         x2 = self.norm(x2 + self.dropout(self.self_attn2(x2, x2, x2, need_weights=False)[0]))
 
@@ -307,6 +315,7 @@ class Fusion21(nn.Module):
         y = self.dropout(y)
 
         return x3
+
 
 class Fusion22(nn.Module):
     def __init__(self, drop=0.1):
@@ -327,12 +336,12 @@ class Fusion22(nn.Module):
         self.fc = nn.Linear(1024, 512, bias=False)
 
     def forward(self, x: Tensor):
-        x1 = self.cnn3d.forward(x)    # (T, B, 512)
-        x2 = self.cnn2d.forward(x)    # (T, B, 512)
+        x1 = self.cnn3d.forward(x)  # (T, B, 512)
+        x2 = self.cnn2d.forward(x)  # (T, B, 512)
 
         x1 = self.pos_embed(x1)
         x2 = self.pos_embed(x2)
-        
+
         x1 = self.norm(x1 + self.dropout(self.self_attn1(x1, x1, x1, need_weights=False)[0]))
         x2 = self.norm(x2 + self.dropout(self.self_attn2(x2, x2, x2, need_weights=False)[0]))
 
@@ -348,11 +357,11 @@ class Fusion22(nn.Module):
 
 class LipReader(nn.Module):
     def __init__(
-        self,
-        vocab_size,
-        enc_input_size=512, enc_hidden_size=256,
-        dec_input_size=512, dec_hidden_size=512,
-        n_layers=2, dropout=0.5
+            self,
+            vocab_size,
+            enc_input_size=512, enc_hidden_size=256,
+            dec_input_size=512, dec_hidden_size=512,
+            n_layers=2, dropout=0.5
     ):
         super().__init__()
         self.vocab_size = vocab_size
@@ -362,7 +371,7 @@ class LipReader(nn.Module):
         self.frontend = Fusion21()
         self.encoder = PackedEncoder(enc_input_size, enc_hidden_size, n_layers, dropout)
         self.decoder = Decoder(vocab_size, dec_input_size, dec_hidden_size, n_layers, dropout)
-        
+
     def forward(self, video, length, target):
         """
         @param video: (B, 3, T, H, W)
@@ -375,9 +384,9 @@ class LipReader(nn.Module):
         # (T, B, 512), (n_layers * 2, B, 256)
         enc_output, enc_hidden = self.encoder.forward(features, length)
 
-        dec_hidden = enc_hidden.permute(1, 0, 2).contiguous()   # (B, n_layers * 2, 256)
-        dec_hidden = dec_hidden.view(-1, self.n_layers, self.enc_hidden_size * 2)   # (B, n_layers, 512)
-        dec_hidden = dec_hidden.permute(1, 0, 2).contiguous()   # (n_layers, B, 512)
+        dec_hidden = enc_hidden.permute(1, 0, 2).contiguous()  # (B, n_layers * 2, 256)
+        dec_hidden = dec_hidden.view(-1, self.n_layers, self.enc_hidden_size * 2)  # (B, n_layers, 512)
+        dec_hidden = dec_hidden.permute(1, 0, 2).contiguous()  # (n_layers, B, 512)
 
         dec_input = torch.ones(1, B, dtype=torch.long).cuda()
         output = torch.empty(L, B, self.vocab_size).cuda()
@@ -387,13 +396,13 @@ class LipReader(nn.Module):
             dec_output, dec_hidden, alpha = self.decoder.forward(dec_input, dec_hidden, enc_output)
             output[i] = dec_output  # (1, B, vocab_size)
 
-            top1 = torch.argmax(dec_output, dim=-1)     
-            predict[i] = top1       # (1, B)
-            
+            top1 = torch.argmax(dec_output, dim=-1)
+            predict[i] = top1  # (1, B)
+
             '''scheduled sampling: https://arxiv.org/pdf/1506.03099.pdf'''
             teacher_force = random.random() < 0.5
             dec_input = target[i].view(1, -1) if teacher_force else top1
-            
+
         return output, predict
 
     def greedy_search(self, video, length, max_len):
@@ -404,9 +413,9 @@ class LipReader(nn.Module):
         # (T, B, 512), (n_layers * 2, B, 256)
         enc_output, enc_hidden = self.encoder.forward(features, length)
 
-        dec_hidden = enc_hidden.permute(1, 0, 2).contiguous()   # (B, n_layers * 2, 256)
-        dec_hidden = dec_hidden.view(-1, self.n_layers, self.enc_hidden_size * 2)   # (B, n_layers, 512)
-        dec_hidden = dec_hidden.permute(1, 0, 2).contiguous()   # (n_layers, B, 512)
+        dec_hidden = enc_hidden.permute(1, 0, 2).contiguous()  # (B, n_layers * 2, 256)
+        dec_hidden = dec_hidden.view(-1, self.n_layers, self.enc_hidden_size * 2)  # (B, n_layers, 512)
+        dec_hidden = dec_hidden.permute(1, 0, 2).contiguous()  # (n_layers, B, 512)
 
         dec_input = torch.ones(1, B, dtype=torch.long).cuda()
         output = torch.empty(L, B, self.vocab_size).cuda()
@@ -416,9 +425,9 @@ class LipReader(nn.Module):
             dec_output, dec_hidden, alpha = self.decoder.forward(dec_input, dec_hidden, enc_output)
             output[i] = dec_output  # (1, B, vocab_size)
 
-            top1 = torch.argmax(dec_output, dim=-1)     
-            predict[i] = top1       # (1, B)
-            
+            top1 = torch.argmax(dec_output, dim=-1)
+            predict[i] = top1  # (1, B)
+
             dec_input = top1
 
         return output, predict

@@ -2,13 +2,14 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
+
 class PackedEncoder(nn.Module):
     def __init__(
-        self,
-        enc_input_size=512, 
-        enc_hidden_size=256, 
-        n_layers=2, 
-        dropout=0.5
+            self,
+            enc_input_size=512,
+            enc_hidden_size=256,
+            n_layers=2,
+            dropout=0.5
     ):
         super().__init__()
         self.gru = nn.GRU(enc_input_size, enc_hidden_size, n_layers, bidirectional=True)
@@ -40,13 +41,14 @@ class PackedEncoder(nn.Module):
                     else:
                         nn.init.constant_(param, 0)
 
+
 class Encoder(nn.Module):
     def __init__(
-        self,
-        enc_input_size=512, 
-        enc_hidden_size=256, 
-        n_layers=2, 
-        dropout=0.5
+            self,
+            enc_input_size=512,
+            enc_hidden_size=256,
+            n_layers=2,
+            dropout=0.5
     ):
         super().__init__()
 
@@ -61,7 +63,7 @@ class Encoder(nn.Module):
         
         @return output: (T, B, 2 * 256)
         @return hidden: (n_layer * 2, B, 256)
-        """        
+        """
         self.gru.flatten_parameters()
         output, hidden = self.gru(input)
 
@@ -76,14 +78,15 @@ class Encoder(nn.Module):
                     else:
                         nn.init.constant_(param, 0)
 
+
 class Decoder(nn.Module):
     def __init__(
-        self,
-        vocab_size,
-        dec_input_size=512,
-        dec_hidden_size=512,
-        n_layers=2, 
-        dropout=0.5
+            self,
+            vocab_size,
+            dec_input_size=512,
+            dec_hidden_size=512,
+            n_layers=2,
+            dropout=0.5
     ):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, dec_input_size)
@@ -92,7 +95,7 @@ class Decoder(nn.Module):
         self.attention = Attention()
         self.attention_fc = nn.Linear(dec_hidden_size * 2, dec_hidden_size)
         self.fc = nn.Linear(dec_hidden_size, vocab_size)
-        
+
         self.dropout = nn.Dropout(dropout)
         self.relu = nn.ReLU(inplace=True)
 
@@ -108,19 +111,19 @@ class Decoder(nn.Module):
         @return hidden:    (2, B, 512)
         @return alpha:     (B, 1, T)   
         """
-        embedded = self.embedding(input)    # (1, B, 512)
+        embedded = self.embedding(input)  # (1, B, 512)
         embedded = self.dropout(embedded)
 
         self.gru.flatten_parameters()
         # (1, B, 512), (2, B, 512)
-        output, hidden = self.gru(embedded, hidden)  
+        output, hidden = self.gru(embedded, hidden)
 
         # (1, B, 512), (B, 1, T)
         context, alpha = self.attention.forward(hidden, enc_output)
 
         output = self.attention_fc(torch.cat((output, context), dim=2))
         output = self.relu(output)
-        output = self.fc(output)    # (1, B, vocab_size)
+        output = self.fc(output)  # (1, B, vocab_size)
 
         return output, hidden, alpha
 
@@ -134,15 +137,17 @@ class Decoder(nn.Module):
                 nn.init.xavier_normal_(param)
             else:
                 nn.init.constant_(param, 0)
-                
+
+
 class Attention(nn.Module):
     """
     Reference: https://github.com/bentrevett/pytorch-seq2seq
     """
+
     def __init__(
-        self,
-        enc_hidden_size=256,
-        dec_hidden_size=512
+            self,
+            enc_hidden_size=256,
+            dec_hidden_size=512
     ):
         super().__init__()
         self.fc1 = nn.Linear(enc_hidden_size * 4 + dec_hidden_size, dec_hidden_size)
@@ -163,21 +168,21 @@ class Attention(nn.Module):
         T = enc_output.size(0)
         B = enc_output.size(1)
 
-        hidden = hidden.permute(1, 0, 2).contiguous()           # (B, 2, 512)
-        hidden = hidden.view(B, -1)                             # (B, 1024)
-        hidden = hidden.repeat(T, 1, 1)                         # (T, B, 1024)
-        hidden = hidden.permute(1, 0, 2).contiguous()           # (B, T, 1024)
-        enc_output = enc_output.permute(1, 0, 2).contiguous()   # (B, T, 512)
-        concat = torch.cat((hidden, enc_output), dim=2)         # (B, T, 1536) 
-        
-        alpha = self.tanh(self.fc1(concat))                     # (B, T, 512)
-        alpha = self.fc2(alpha)                                 # (B, T, 1)
-        alpha = alpha.permute(0, 2, 1).contiguous()             # (B, 1, T)
+        hidden = hidden.permute(1, 0, 2).contiguous()  # (B, 2, 512)
+        hidden = hidden.view(B, -1)  # (B, 1024)
+        hidden = hidden.repeat(T, 1, 1)  # (T, B, 1024)
+        hidden = hidden.permute(1, 0, 2).contiguous()  # (B, T, 1024)
+        enc_output = enc_output.permute(1, 0, 2).contiguous()  # (B, T, 512)
+        concat = torch.cat((hidden, enc_output), dim=2)  # (B, T, 1536)
+
+        alpha = self.tanh(self.fc1(concat))  # (B, T, 512)
+        alpha = self.fc2(alpha)  # (B, T, 1)
+        alpha = alpha.permute(0, 2, 1).contiguous()  # (B, 1, T)
         alpha = self.softmax(alpha)
-        
-        context = torch.bmm(alpha, enc_output)                  # (B, 1, 512)
-        context = context.permute(1, 0, 2).contiguous()         # (1, B, 512)
-        
+
+        context = torch.bmm(alpha, enc_output)  # (B, 1, 512)
+        context = context.permute(1, 0, 2).contiguous()  # (1, B, 512)
+
         return context, alpha
 
     def _init(self):

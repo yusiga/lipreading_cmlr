@@ -3,11 +3,14 @@ def read_file(file_path):
         lines = file.read().splitlines()
     return lines
 
+
 def write_file(file_path, lines):
     with open(file_path, 'w', encoding='utf-8') as file:
         for line in lines:
             file.write(line + '\n')
 
+
+# 把原列表按照每 5 个的间隔重排，让原本相邻的元素被均匀分散
 def reorder_pinyin(pinyin_list):
     group_count = 5
     grouped_pinyin = [[] for _ in range(group_count)]
@@ -18,9 +21,10 @@ def reorder_pinyin(pinyin_list):
     # print(grouped_pinyin[0])
     reordered_list = []
     for j in range(group_count):
-        reordered_list+=grouped_pinyin[j]
+        reordered_list += grouped_pinyin[j]
     # print(reordered_list)
     return reordered_list
+
 
 def main():
     input_file = 'pinyin_tone.txt'
@@ -29,6 +33,7 @@ def main():
     pinyin_list = read_file(input_file)
     reordered_pinyin = reorder_pinyin(pinyin_list)
     write_file(output_file, reordered_pinyin)
+
 
 if __name__ == '__main__':
     main()
