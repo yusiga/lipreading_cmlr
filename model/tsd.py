@@ -30,6 +30,7 @@ class MVTransformer_Decoder(nn.Module):
         # return output
         return output, fake_pred_text
 
+    # 权重初始化：对所有维度大于 1 的参数（例如权重矩阵）使用 Xavier 均匀初始化
     def _reset_parameters(self):
         r"""Initiate parameters in the transformer model."""
 
