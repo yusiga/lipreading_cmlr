@@ -117,7 +117,7 @@ class FrequencyBranch(nn.Module):
         return x_out.view(x_out.size(0), -1)  # 展平 [B, N]
 
 
-# 特征对齐层
+# 特征对齐层，通过线性层过渡到同一维度
 class FeatureAlignment(nn.Module):
     def __init__(self, in1, in2, out_dim):
         super(FeatureAlignment, self).__init__()
@@ -230,7 +230,6 @@ class LinProVSR(nn.Module):
             tgt_key_padding_mask=tgt_pad_mask
         )
         output_pinyin, fake_pred_text = self.transformer_pinyin_De.forward(
-
             mem2=fused_p,
             x=pinyin,
             pseduo_x=pseduo_pinyin,

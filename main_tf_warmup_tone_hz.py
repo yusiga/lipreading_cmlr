@@ -142,7 +142,7 @@ def train_epoch(epoch):
         char_tgt = char[:, 1:].to(DEVICE, non_blocking=True)  # [B, L]
         pinyin_tgt = pinyin[:, 1:].to(DEVICE, non_blocking=True)  # [B, L]
 
-        optimizer.zero_grad()
+        optimizer.zero_grad()  # 梯度清零
         mem2, real_text_encoded, fake_text_encoded, output_fc_pinyin, mem2_hanzi, real_text_encoded_hanzi, fake_text_encoded_hanzi, output_fc_hanzi, output_fc_fake, output_fc_fake_pinyin = model.forward(
             video, pinyin_in, pseduo_pinyin)  # (L, B, vocab)
         output_fc_pinyin = output_fc_pinyin.permute(1, 2, 0)  # (B, vocab, L)
@@ -169,7 +169,7 @@ def train_epoch(epoch):
         # w_pinyin_trip_out = torch.tensor(w_pinyin_trip_out, requires_grad=False)
 
         loss_vpc = triplet_loss(mem2.transpose(0, 1).mean(dim=1), real_text_encoded.transpose(0, 1).mean(dim=1),
-                                fake_text_encoded.transpose(0, 1).mean(dim=1))  # 视频编码，真文本编码，假文本编码
+                                fake_text_encoded.transpose(0, 1).mean(dim=1))  # 视频编码，真文本编码，假文本编码（拼音版）
         # loss_tsc = triplet_loss(pinyin_tgt,output_fc_pinyin.mean(dim=1),output_fc_fake_pinyin.mean(dim=1)) # 标签，真预测，假预测
 
         # loss_trip = triplet_loss(mem2_hanzi.transpose(0,1).mean(dim=1),real_text_encoded_hanzi.transpose(0,1).mean(dim=1),fake_text_encoded_hanzi.transpose(0,1).mean(dim=1))# 视频编码，真文本编码，假文本编码
@@ -193,8 +193,8 @@ def train_epoch(epoch):
         #     best_weights = (w_pinyin.item(), w_char.item(), w_trip.item(), w_trip_out.item(), w_pinyin_trip.item(), w_pinyin_trip_out.item())
 
         # loss = loss_pinyin_ce + loss_char_ce+0.1*loss_trip+0.1*loss_trip_out+0.1*loss_pinyin_ce_trip+0.1*loss_pinyin_ce_trip_out
-        loss.backward()
-        optimizer.step()
+        loss.backward()  # 反向传播，计算梯度
+        optimizer.step()  # 根据梯度更新参数
 
         loss = loss.item()
         loss_sum += loss
