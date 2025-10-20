@@ -39,9 +39,8 @@ PATH_TEST_LIST = 'config/cmlr/test_list.txt'
 
 PREFIX = '/data'
 SAVE_PREFIX = '/home/hfut/ZJR'
-# PATH_LMDB = f'{PREFIX}/Dataset/CMLR_lmdb'
 PATH_LMDB = f'{PREFIX}/Dataset/CMLR_lmdb_tone_pseduo'
-PATH_SAVE = f'{SAVE_PREFIX}/ZBC/zbc-save-cmlr'
+PATH_SAVE = f'{SAVE_PREFIX}/GYY/save-cmlr'
 
 parser = argparse.ArgumentParser(description='Lipreading Train')
 # 是否使用预训练权重
@@ -125,16 +124,7 @@ def train_epoch(epoch):
     loss_sum = 0
     model.train()
     train_results = []
-    # 所有可能的权重组合
-    # w_pinyin_options = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-    # w_char_options = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-    # w_trip_options = [0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09, 0.1, 0.5]
-    # w_trip_out_options = [0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09, 0.1, 0.5]
-    # w_pinyin_trip_options = [0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09, 0.1, 0.5]
-    # w_pinyin_trip_out_options = [0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09, 0.1, 0.5]
 
-    # best_loss = float('inf')
-    # best_weights = None
     for i, (video, pinyin, pseduo_pinyin, char) in enumerate(train_loader):
         video = video.to(DEVICE, non_blocking=True)
         pinyin_in = pinyin[:, :-1].to(DEVICE, non_blocking=True)  # [B, L]
@@ -159,40 +149,21 @@ def train_epoch(epoch):
         fake_pred_text_hanzi:伪文本和真实视频解码出的结果
         """
 
-        # for w_pinyin, w_char, w_trip, w_trip_out, w_pinyin_trip, w_pinyin_trip_out in itertools.product(w_pinyin_options, w_char_options, w_trip_options, w_trip_out_options, w_pinyin_trip_options, w_pinyin_trip_out_options):
-        # 初始化权重
-        # w_pinyin = torch.tensor(w_pinyin, requires_grad=False)
-        # w_char = torch.tensor(w_char, requires_grad=False)
-        # w_trip = torch.tensor(w_trip, requires_grad=False)
-        # w_trip_out = torch.tensor(w_trip_out, requires_grad=False)
-        # w_pinyin_trip = torch.tensor(w_pinyin_trip, requires_grad=False)
-        # w_pinyin_trip_out = torch.tensor(w_pinyin_trip_out, requires_grad=False)
-
         loss_vpc = triplet_loss(mem2.transpose(0, 1).mean(dim=1), real_text_encoded.transpose(0, 1).mean(dim=1),
                                 fake_text_encoded.transpose(0, 1).mean(dim=1))  # 视频编码，真文本编码，假文本编码（拼音版）
-        # loss_tsc = triplet_loss(pinyin_tgt,output_fc_pinyin.mean(dim=1),output_fc_fake_pinyin.mean(dim=1)) # 标签，真预测，假预测
-
-        # loss_trip = triplet_loss(mem2_hanzi.transpose(0,1).mean(dim=1),real_text_encoded_hanzi.transpose(0,1).mean(dim=1),fake_text_encoded_hanzi.transpose(0,1).mean(dim=1))# 视频编码，真文本编码，假文本编码
-        # loss_trip_out = triplet_loss(char_tgt.mean(dim=1),output_fc_hanzi.mean(dim=1),output_fc_fake.mean(dim=1)) # 标签，真预测，假预测
-        # print(char_tgt.shape,output_fc_hanzi.mean(dim=1).shape,output_fc_fake.mean(dim=1).shape)
-        # loss_trip_out = triplet_loss(char_tgt,output_fc_hanzi.mean(dim=1),output_fc_fake.mean(dim=1)) # 标签，真预测，假预测
+        loss_tsc = triplet_loss(pinyin_tgt, output_fc_pinyin.mean(dim=1),
+                                output_fc_fake_pinyin.mean(dim=1))  # 标签，真预测，假预测
 
         loss_pinyin_ce = criteron(output_fc_pinyin, pinyin_tgt)
         loss_char_ce = criteron(output_fc_hanzi, char_tgt)
         # 根据权重计算总损失
         loss = (
-                loss_char_ce +
                 loss_vpc +
+                loss_tsc +
+                loss_char_ce +
                 loss_pinyin_ce
-            # loss_tsc
         )
 
-        # # 如果当前损失更小，保存当前权重
-        # if loss < best_loss:
-        #     best_loss = loss
-        #     best_weights = (w_pinyin.item(), w_char.item(), w_trip.item(), w_trip_out.item(), w_pinyin_trip.item(), w_pinyin_trip_out.item())
-
-        # loss = loss_pinyin_ce + loss_char_ce+0.1*loss_trip+0.1*loss_trip_out+0.1*loss_pinyin_ce_trip+0.1*loss_pinyin_ce_trip_out
         loss.backward()  # 反向传播，计算梯度
         optimizer.step()  # 根据梯度更新参数
 
@@ -211,14 +182,7 @@ def train_epoch(epoch):
 
         if i % 100 == 0:
             print(f'epoch-{epoch} [{i * BATCH_SIZE:>5d}/{len(train_set)}], lr={lr:.8f}, loss={loss:.6f}, {current()}')
-            # print(f'Best weights: w_pinyin={best_weights[0]}, w_char={best_weights[1]}, w_trip={best_weights[2]}, w_trip_out={best_weights[3]}, w_pinyin_trip={best_weights[4]}, w_pinyin_trip_out={best_weights[5]}')
 
-    # Save results to CSV file
-    # csv_filename = f'{CSV_OUTPUT_PATH}/train_predictions_vs_targets_epoch_{epoch}.csv'
-    # with open(csv_filename, mode='w', newline='', encoding='utf-8') as file:
-    #     writer = csv.writer(file)
-    #     writer.writerow(['Prediction', 'Target'])
-    #     writer.writerows(train_results)
     return loss_sum / len(train_loader)
 
 
@@ -246,12 +210,6 @@ def valid_epoch():
                 print('\033[1;35m', f'P: {predict:<70}', '\033[0m')
                 print('\033[1;32m', f'T: {truth:<70}', '\033[0m')
                 print('-' * 100)
-    # Save results to CSV file
-    # valid_csv_filename = f'{CSV_OUTPUT_PATH}/valid_predictions_vs_targets.csv'
-    # with open(valid_csv_filename, mode='w', newline='', encoding='utf-8') as file:
-    #     writer = csv.writer(file)
-    #     writer.writerow(['Prediction', 'Target'])
-    #     writer.writerows(valid_results)
 
     return cer_sum / len(valid_set)
 
@@ -291,7 +249,6 @@ if __name__ == '__main__':
 
         # save checkpoint
         if cer > valid_cer:
-            # save_path = os.path.join(output_dir, f'ep{epoch:0>2}_lr_{lr:.8f}_loss_{train_loss:.6f}_cer_{valid_cer:.6f}.pt')
             save_path = os.path.join(output_dir, f'best.pt')
             ckpt = {
                 'epoch': epoch,
