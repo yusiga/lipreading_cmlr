@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from .attention import CA, STA, SATA
-from typing import Optional
+from typing import Optional, Tuple
 
 
 class Cnn3d(nn.Module):
@@ -116,7 +116,7 @@ class MVTransformer_Encoder(nn.Module):
                 src_key_padding_mask: Optional[Tensor] = None,
                 tgt_key_padding_mask: Optional[Tensor] = None,
                 memory_key_padding_mask: Optional[Tensor] = None
-                ) -> Tensor:
+                ) -> tuple[Tensor, Tensor]:
         # mem1 = self.encoder1.forward(src1, src_mask, src_key_padding_mask)
         # mem2 = self.encoder2.forward(src2, src_mask, src_key_padding_mask)
         # mem = mem1 + mem2

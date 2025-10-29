@@ -10,7 +10,7 @@ except:
     plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']
 
 # 日志文件路径
-log_file = "log/2025.10.17_15.44.57-1011-notsc.log"
+log_file = "log/2025.10.20_21.44.26-1011-notsc.log"
 
 # 正则表达式匹配 epoch、cer、loss
 pattern = re.compile(

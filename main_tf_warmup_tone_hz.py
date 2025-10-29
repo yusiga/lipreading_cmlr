@@ -30,8 +30,8 @@ NUM_EPOCH = 200
 WARMUP_EPOCH = 5
 LERANING_RATE = 3e-4
 # 6e-3
-BATCH_SIZE = 16
-BATCH_SIZE_VALID = 8
+BATCH_SIZE = 32
+BATCH_SIZE_VALID = 32
 
 PATH_TRAIN_LIST = 'config/cmlr/train_list.txt'
 PATH_VALID_LIST = 'config/cmlr/valid_list.txt'

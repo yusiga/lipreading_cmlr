@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch import Tensor
-from typing import Optional
+from typing import Optional, Tuple
 
 
 class MVTransformer_Decoder(nn.Module):
@@ -20,7 +20,7 @@ class MVTransformer_Decoder(nn.Module):
                 src_key_padding_mask: Optional[Tensor] = None,
                 tgt_key_padding_mask: Optional[Tensor] = None,
                 memory_key_padding_mask: Optional[Tensor] = None
-                ) -> Tensor:
+                ) -> tuple[Tensor, Tensor]:
         output = self.decoder.forward(x, mem2, tgt_mask, memory_mask, tgt_key_padding_mask, memory_key_padding_mask)
 
         fake_pred_text = self.fake_text_decoder.forward(pseduo_x, mem2,
