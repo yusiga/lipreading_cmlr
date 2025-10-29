@@ -28,7 +28,7 @@ from utils.loss import triplet_loss
 
 NUM_EPOCH = 200
 WARMUP_EPOCH = 5
-LERANING_RATE = 3e-4
+LERANING_RATE = 5e-4
 # 6e-3
 BATCH_SIZE = 16
 BATCH_SIZE_VALID = 8
